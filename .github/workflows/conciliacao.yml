@@ -2,8 +2,8 @@ name: Conciliação UMA
 
 on:
   schedule:
-    # Todo dia às 10:00 horário de Brasília (13:00 UTC)
-    - cron: "0 13 * * *"
+    # Todo dia às 20:00 horário de Brasília (23:00 UTC)
+    - cron: "0 23 * * *"
   workflow_dispatch:
 
 jobs:
@@ -26,4 +26,6 @@ jobs:
         env:
           TRINKS_TOKEN:            ${{ secrets.TRINKS_TOKEN }}
           GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+          TELEGRAM_TOKEN:          ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID:        ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python conciliacao.py

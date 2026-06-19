@@ -22,6 +22,9 @@ BASE_URL          = "https://api.trinks.com"
 GOOGLE_CREDENTIALS_JSON = os.environ.get("GOOGLE_CREDENTIALS_JSON", "")
 GOOGLE_CREDENTIALS_FILE = "credentials.json"
 
+TELEGRAM_TOKEN   = os.environ.get("TELEGRAM_TOKEN", "8683343053:AAE6CCxOpsWrUxBoPROVvTlWBPnI3xzvFAM")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "-5144739527")
+
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/drive",
@@ -107,6 +110,20 @@ def buscar_lancamento(venc_iso, valor):
                 candidatos.append(l)
         time.sleep(0.15)
     return candidatos
+
+
+def enviar_telegram(mensagem):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    try:
+        r = requests.post(url, json={
+            "chat_id":    TELEGRAM_CHAT_ID,
+            "text":       mensagem,
+            "parse_mode": "HTML",
+        }, timeout=10)
+        if not r.ok:
+            print(f"Telegram erro {r.status_code}: {r.text[:100]}")
+    except Exception as e:
+        print(f"Telegram exception: {e}")
 
 
 def marcar_pago(lancamento_id, data_pgto, forma_id, valor):
@@ -242,6 +259,29 @@ def main():
             print(f"  {x}")
 
     print(f"\nConcluído.")
+
+    # ── Telegram ──────────────────────────────────────────────────────────────
+    hoje = datetime.now().strftime("%d/%m/%Y")
+    if atualizados:
+        detalhes = "\n".join(f"  • {x}" for x in atualizados)
+        msg = (
+            f"<b>✅ Conciliação UMA — {hoje}</b>\n\n"
+            f"<b>{len(atualizados)} despesa(s) atualizadas para Pago:</b>\n"
+            f"{detalhes}"
+        )
+        if nao_encontrados:
+            msg += f"\n\n<b>🔍 {len(nao_encontrados)} não encontrada(s) no Trinks</b>"
+        if erros:
+            msg += f"\n<b>❌ {len(erros)} erro(s)</b>"
+    else:
+        msg = (
+            f"<b>📋 Conciliação UMA — {hoje}</b>\n\n"
+            f"Nenhuma despesa nova para atualizar."
+        )
+        if nao_encontrados:
+            msg += f"\n🔍 {len(nao_encontrados)} não encontrada(s) no Trinks"
+
+    enviar_telegram(msg)
 
 
 if __name__ == "__main__":
