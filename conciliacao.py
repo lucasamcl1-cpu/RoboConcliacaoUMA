@@ -175,16 +175,18 @@ def autenticar_sheets():
 
 
 def ler_despesas(aba):
-    rows = aba.get("A1:K1000") or []
+    # lê até coluna L para incluir o código CTR
+    rows = aba.get("A1:L1000") or []
     despesas = []
     for i, row in enumerate(rows[1:], start=2):
-        while len(row) < 11:
+        while len(row) < 12:
             row.append("")
         venc      = row[1].strip()
         pgto      = row[2].strip()
         descricao = row[5].strip()
         forma     = row[9].strip()
         valor_str = row[10].strip()
+        ctr       = row[11].strip()   # col L — código de conciliação único
         if not pgto:
             continue
         venc_iso = parse_data(venc)
@@ -193,7 +195,7 @@ def ler_despesas(aba):
         if not venc_iso or not pgto_iso or valor is None:
             continue
         despesas.append({
-            "linha": i, "venc_iso": venc_iso, "pgto_iso": pgto_iso,
+            "linha": i, "ctr": ctr, "venc_iso": venc_iso, "pgto_iso": pgto_iso,
             "descricao": descricao, "forma": forma, "valor": valor,
         })
     return despesas
@@ -249,21 +251,35 @@ def main():
         forma_id = resolver_forma_id(forma_key)
 
         base = datetime.strptime(venc_iso, "%Y-%m-%d")
-        dias_janela = {(base + timedelta(days=d)).strftime("%Y-%m-%d") for d in range(-3, 4)}
 
+        def distancia_venc(l):
+            """Dias de distância entre o vencimento do Trinks e o da planilha."""
+            vt = l.get("dataVencimento", "")[:10]
+            if not vt:
+                return 999
+            return abs((datetime.strptime(vt, "%Y-%m-%d") - base).days)
+
+        # busca candidatos em janela de ±3 dias por valor
+        dias_janela = {(base + timedelta(days=d)).strftime("%Y-%m-%d") for d in range(-3, 4)}
         lancamentos_janela = [
             l for l in todos_lancamentos.values()
             if l.get("dataVencimento", "")[:10] in dias_janela
             and l["id"] not in ids_ja_processados
         ]
 
-        # 1. tenta match exato por valor
-        candidatos = [l for l in lancamentos_janela if abs(l.get("valor", 0) - valor) < 0.05]
+        # 1. match por valor — ordena pelo vencimento mais próximo da planilha
+        candidatos = sorted(
+            [l for l in lancamentos_janela if abs(l.get("valor", 0) - valor) < 0.05],
+            key=distancia_venc
+        )
 
-        # 2. fallback: match por descrição (aceita valor diferente)
+        # 2. fallback: match por descrição exata (quando valor difere)
         candidato_desc = None
         if not candidatos:
-            por_desc = [l for l in lancamentos_janela if desc_similar(desc, l.get("descricao", ""))]
+            por_desc = sorted(
+                [l for l in lancamentos_janela if desc_similar(desc, l.get("descricao", ""))],
+                key=distancia_venc
+            )
             if por_desc:
                 candidato_desc = por_desc[0]
 
