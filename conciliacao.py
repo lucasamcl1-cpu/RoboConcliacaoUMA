@@ -128,15 +128,10 @@ def buscar_lancamentos_dia(dia):
 
 
 def desc_similar(desc_planilha, desc_trinks):
-    """Verifica se as descrições têm sobreposição suficiente."""
+    """Verifica se as descrições são idênticas (ignorando maiúsculas e espaços extras)."""
     a = desc_planilha.lower().strip()
     b = (desc_trinks or "").lower().strip()
-    if not a or not b:
-        return False
-    # palavras com 4+ letras em comum
-    palavras_a = set(w for w in a.split() if len(w) >= 4)
-    palavras_b = set(w for w in b.split() if len(w) >= 4)
-    return bool(palavras_a & palavras_b)
+    return a == b
 
 
 def resolver_forma_id(forma_key, lancamento=None):
