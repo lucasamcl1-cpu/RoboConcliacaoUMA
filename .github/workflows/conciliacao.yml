@@ -1,0 +1,29 @@
+name: Conciliação UMA
+
+on:
+  schedule:
+    # Todo dia às 10:00 horário de Brasília (13:00 UTC)
+    - cron: "0 13 * * *"
+  workflow_dispatch:
+
+jobs:
+  conciliar:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Instalar dependências
+        run: pip install requests gspread google-auth
+
+      - name: Rodar conciliação
+        env:
+          TRINKS_TOKEN:            ${{ secrets.TRINKS_TOKEN }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+        run: python conciliacao.py
